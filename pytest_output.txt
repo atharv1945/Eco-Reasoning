@@ -1,0 +1,40 @@
+============================= test session starts =============================
+platform win32 -- Python 3.12.8, pytest-9.0.2, pluggy-1.6.0 -- D:\Desktop Data\ML\Projects\Eco-Reasoning\venv\Scripts\python.exe
+cachedir: .pytest_cache
+rootdir: D:\Desktop Data\ML\Projects\Eco-Reasoning
+plugins: anyio-4.12.1
+collecting ... collected 6 items
+
+test_gateway_integration.py::TestEntropyDrivenRouting::test_path_a_low_entropy PASSED
+test_gateway_integration.py::TestEntropyDrivenRouting::test_path_b_high_entropy PASSED
+test_gateway_integration.py::TestEntropyDrivenRouting::test_path_a_high_entropy_no_news PASSED
+test_gateway_integration.py::TestGatewayResilience::test_quant_model_failure FAILED
+test_gateway_integration.py::TestGatewayEndpoints::test_health_endpoint PASSED
+test_gateway_integration.py::TestGatewayEndpoints::test_root_endpoint PASSED
+
+================================== FAILURES ===================================
+_______________ TestGatewayResilience.test_quant_model_failure ________________
+test_gateway_integration.py:218: in test_quant_model_failure
+    assert response.status_code == 200, (
+E   AssertionError: Expected 200 on System 1 failure, got 422: {"detail":[{"type":"float_parsing","loc":["body","recent_prices",2],"msg":"Input should be a valid number, unable to parse string as a number","input":"bad"},{"type":"float_parsing","loc":["body","recent_prices",5],"msg":"Input should be a valid number, unable to parse string as a number","input":"bad"},{"type":"float_parsing","loc":["body","recent_prices",8],"msg":"Input should be a valid number, unable to parse string as a number","input":"bad"},{"type":"float_parsing","loc":["body","recent_prices",11],"msg":"Input should be a valid number, unable to parse string as a number","input":"bad"},{"type":"float_parsing","loc":["body","recent_prices",14],"msg":"Input should be a valid number, unable to parse string as a number","input":"bad"},{"type":"float_parsing","loc":["body","recent_prices",17],"msg":"Input should be a valid number, unable to parse string as a number","input":"bad"},{"type":"float_parsing","loc":["body","recent_prices",20],"msg":"Input should be a valid number, unable to parse string as a number","input":"bad"},{"type":"float_parsing","loc":["body","recent_prices",23],"msg":"Input should be a valid number, unable to parse string as a number","input":"bad"},{"type":"float_parsing","loc":["body","recent_prices",26],"msg":"Input should be a valid number, unable to parse string as a number","input":"bad"},{"type":"float_parsing","loc":["body","recent_prices",29],"msg":"Input should be a valid number, unable to parse string as a number","input":"bad"},{"type":"float_parsing","loc":["body","recent_prices",32],"msg":"Input should be a valid number, unable to parse string as a number","input":"bad"},{"type":"float_parsing","loc":["body","recent_prices",35],"msg":"Input should be a valid number, unable to parse string as a number","input":"bad"},{"type":"float_parsing","loc":["body","recent_prices",38],"msg":"Input should be a valid number, unable to parse string as a number","input":"bad"},{"type":"float_parsing","loc":["body","recent_prices",41],"msg":"Input should be a valid number, unable to parse string as a number","input":"bad"},{"type":"float_parsing","loc":["body","recent_prices",44],"msg":"Input should be a valid number, unable to parse string as a number","input":"bad"},{"type":"float_parsing","loc":["body","recent_prices",47],"msg":"Input should be a valid number, unable to parse string as a number","input":"bad"},{"type":"float_parsing","loc":["body","recent_prices",50],"msg":"Input should be a valid number, unable to parse string as a number","input":"bad"},{"type":"float_parsing","loc":["body","recent_prices",53],"msg":"Input should be a valid number, unable to parse string as a number","input":"bad"},{"type":"float_parsing","loc":["body","recent_prices",56],"msg":"Input should be a valid number, unable to parse string as a number","input":"bad"},{"type":"float_parsing","loc":["body","recent_prices",59],"msg":"Input should be a valid number, unable to parse string as a number","input":"bad"},{"type":"float_parsing","loc":["body","recent_prices",62],"msg":"Input should be a valid number, unable to parse string as a number","input":"bad"},{"type":"float_parsing","loc":["body","recent_prices",65],"msg":"Input should be a valid number, unable to parse string as a number","input":"bad"},{"type":"float_parsing","loc":["body","recent_prices",68],"msg":"Input should be a valid number, unable to parse string as a number","input":"bad"},{"type":"float_parsing","loc":["body","recent_prices",71],"msg":"Input should be a valid number, unable to parse string as a number","input":"bad"},{"type":"float_parsing","loc":["body","recent_prices",74],"msg":"Input should be a valid number, unable to parse string as a number","input":"bad"},{"type":"float_parsing","loc":["body","recent_prices",77],"msg":"Input should be a valid number, unable to parse string as a number","input":"bad"},{"type":"float_parsing","loc":["body","recent_prices",80],"msg":"Input should be a valid number, unable to parse string as a number","input":"bad"},{"type":"float_parsing","loc":["body","recent_prices",83],"msg":"Input should be a valid number, unable to parse string as a number","input":"bad"},{"type":"float_parsing","loc":["body","recent_prices",86],"msg":"Input should be a valid number, unable to parse string as a number","input":"bad"},{"type":"float_parsing","loc":["body","recent_prices",89],"msg":"Input should be a valid number, unable to parse string as a number","input":"bad"},{"type":"float_parsing","loc":["body","recent_prices",92],"msg":"Input should be a valid number, unable to parse string as a number","input":"bad"},{"type":"float_parsing","loc":["body","recent_prices",95],"msg":"Input should be a valid number, unable to parse string as a number","input":"bad"},{"type":"float_parsing","loc":["body","recent_prices",98],"msg":"Input should be a valid number, unable to parse string as a number","input":"bad"},{"type":"float_parsing","loc":["body","recent_prices",101],"msg":"Input should be a valid number, unable to parse string as a number","input":"bad"}]}
+E   assert 422 == 200
+E    +  where 422 = <Response [422 Unprocessable Entity]>.status_code
+============================== warnings summary ===============================
+gateway.py:48
+  D:\Desktop Data\ML\Projects\Eco-Reasoning\gateway.py:48: PydanticDeprecatedSince20: Support for class-based `config` is deprecated, use ConfigDict instead. Deprecated in Pydantic V2.0 to be removed in V3.0. See Pydantic V2 Migration Guide at https://errors.pydantic.dev/2.12/migration/
+    class MarketRequest(BaseModel):
+
+test_gateway_integration.py::TestEntropyDrivenRouting::test_path_a_low_entropy
+test_gateway_integration.py::TestEntropyDrivenRouting::test_path_b_high_entropy
+test_gateway_integration.py::TestEntropyDrivenRouting::test_path_a_high_entropy_no_news
+  D:\Desktop Data\ML\Projects\Eco-Reasoning\gateway.py:284: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+    result["timestamp"] = datetime.utcnow().isoformat()
+
+test_gateway_integration.py::TestGatewayEndpoints::test_health_endpoint
+  D:\Desktop Data\ML\Projects\Eco-Reasoning\gateway.py:303: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+    timestamp=datetime.utcnow().isoformat()
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+=========================== short test summary info ===========================
+FAILED test_gateway_integration.py::TestGatewayResilience::test_quant_model_failure
+================== 1 failed, 5 passed, 5 warnings in 57.04s ===================

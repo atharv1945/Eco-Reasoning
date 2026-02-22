@@ -1,270 +1,236 @@
 """
-Efficiency Benchmark - Standard vs Eco-Reasoning Architecture
-==============================================================
-Compares the cost and latency efficiency of:
-- Standard Architecture: All requests use LLM
-- Eco-Reasoning: Intelligent routing (System 1 for low-vol, System 2 for high-vol)
+benchmark_efficiency.py — Eco-Reasoning vs Standard RAG/LLM Efficiency Benchmark
+==================================================================================
+Simulates 10,000 market ticks (95% Normal / 5% Anomaly) and compares:
+  - Standard RAG/LLM  : every tick hits the LLM  (800 ms, $0.001 / tick)
+  - Eco-Reasoning v2  : Path A = 0.55 ms, Path B = 800 ms, cost only on Path B
 
-Simulation: 1,000 trading ticks (900 low-vol, 100 high-vol)
+Outputs: efficiency_benchmark.png  (professional dark-themed financial chart)
 """
 
-import matplotlib.pyplot as plt
 import numpy as np
-
-
-# ============================================================================
-# Configuration
-# ============================================================================
-
-# Simulation parameters
-TOTAL_TICKS = 1000
-LOW_VOL_TICKS = 900   # 90% of traffic
-HIGH_VOL_TICKS = 100  # 10% of traffic
-
-# Latency (in seconds)
-SYSTEM1_LATENCY = 0.005  # 5ms for fast statistical model
-SYSTEM2_LATENCY = 1.0    # 1s for LLM reasoning
-
-# Cost per request (in USD)
-# Based on Groq pricing: ~$0.0001 per request for llama-3.3-70b
-SYSTEM1_COST = 0.0      # Free (local computation)
-SYSTEM2_COST = 0.0001   # LLM API call cost
-
+import matplotlib.pyplot as plt
+import matplotlib.patches as mpatches
+from matplotlib.ticker import FuncFormatter
 
 # ============================================================================
-# Architecture Calculations
+# Simulation Parameters
 # ============================================================================
 
-def calculate_standard_architecture():
-    """
-    Standard Architecture: All requests use LLM.
-    
-    Every request goes through expensive LLM processing.
-    """
-    total_latency = TOTAL_TICKS * SYSTEM2_LATENCY
-    total_cost = TOTAL_TICKS * SYSTEM2_COST
-    
-    return {
-        "name": "Standard\n(All LLM)",
-        "total_latency_s": total_latency,
-        "total_cost_usd": total_cost,
-        "avg_latency_ms": (total_latency / TOTAL_TICKS) * 1000,
-        "cost_per_tick": total_cost / TOTAL_TICKS
-    }
+TOTAL_TICKS       = 10_000
+NORMAL_FRACTION   = 0.95         # Path A
+ANOMALY_FRACTION  = 0.05         # Path B
 
+STANDARD_LATENCY_MS   = 800.0    # ms per tick
+STANDARD_COST_PER_TICK = 0.001   # USD per tick
 
-def calculate_eco_reasoning():
-    """
-    Eco-Reasoning Architecture: Intelligent routing.
-    
-    - Low volatility (90%): Fast System 1 (5ms, free)
-    - High volatility (10%): Deep System 2 (1s, LLM cost)
-    """
-    # Low volatility ticks (System 1)
-    low_vol_latency = LOW_VOL_TICKS * SYSTEM1_LATENCY
-    low_vol_cost = LOW_VOL_TICKS * SYSTEM1_COST
-    
-    # High volatility ticks (System 2)
-    high_vol_latency = HIGH_VOL_TICKS * SYSTEM2_LATENCY
-    high_vol_cost = HIGH_VOL_TICKS * SYSTEM2_COST
-    
-    # Total
-    total_latency = low_vol_latency + high_vol_latency
-    total_cost = low_vol_cost + high_vol_cost
-    
-    return {
-        "name": "Eco-Reasoning\n(Hybrid)",
-        "total_latency_s": total_latency,
-        "total_cost_usd": total_cost,
-        "avg_latency_ms": (total_latency / TOTAL_TICKS) * 1000,
-        "cost_per_tick": total_cost / TOTAL_TICKS,
-        "low_vol_latency": low_vol_latency,
-        "high_vol_latency": high_vol_latency,
-        "low_vol_cost": low_vol_cost,
-        "high_vol_cost": high_vol_cost
-    }
-
+ECO_PATH_A_LATENCY_MS = 0.55     # ms (LightGBM + Wavelet, from benchmarks)
+ECO_PATH_B_LATENCY_MS = 800.0    # ms (LLM, same as standard)
+ECO_COST_PER_TICK_B   = 0.001    # USD (only for Path B)
 
 # ============================================================================
-# Visualization
+# Calculate Metrics
 # ============================================================================
 
-def create_benchmark_visualization(standard, eco):
-    """
-    Create side-by-side bar charts comparing architectures.
-    
-    Chart 1: Total Latency
-    Chart 2: Estimated API Cost
-    """
-    # Create figure with 2 subplots
-    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(14, 6))
-    fig.suptitle('Efficiency Benchmark: Standard vs Eco-Reasoning Architecture\n' + 
-                 f'Simulation: {TOTAL_TICKS:,} Trading Ticks ({LOW_VOL_TICKS} Low-Vol, {HIGH_VOL_TICKS} High-Vol)',
-                 fontsize=14, fontweight='bold')
-    
-    # Colors
-    color_standard = '#e74c3c'  # Red
-    color_eco = '#27ae60'       # Green
-    
-    # ========================================================================
-    # Chart 1: Total Latency
-    # ========================================================================
-    
-    architectures = [standard['name'], eco['name']]
-    latencies = [standard['total_latency_s'], eco['total_latency_s']]
-    colors = [color_standard, color_eco]
-    
-    bars1 = ax1.bar(architectures, latencies, color=colors, alpha=0.8, edgecolor='black')
-    
-    # Add value labels on bars
-    for bar, latency in zip(bars1, latencies):
-        height = bar.get_height()
-        ax1.text(bar.get_x() + bar.get_width()/2., height,
-                f'{latency:.1f}s\n({latency/60:.1f} min)',
-                ha='center', va='bottom', fontweight='bold', fontsize=11)
-    
-    ax1.set_ylabel('Total Latency (seconds)', fontsize=12, fontweight='bold')
-    ax1.set_title('Total Processing Time', fontsize=13, fontweight='bold')
-    ax1.grid(axis='y', alpha=0.3, linestyle='--')
-    
-    # Add improvement annotation
-    improvement = ((standard['total_latency_s'] - eco['total_latency_s']) / 
-                   standard['total_latency_s'] * 100)
-    ax1.text(0.5, max(latencies) * 0.5, 
-            f'⚡ {improvement:.1f}% Faster',
-            ha='center', fontsize=12, fontweight='bold',
-            bbox=dict(boxstyle='round', facecolor='yellow', alpha=0.7))
-    
-    # ========================================================================
-    # Chart 2: Estimated API Cost
-    # ========================================================================
-    
-    costs = [standard['total_cost_usd'], eco['total_cost_usd']]
-    
-    bars2 = ax2.bar(architectures, costs, color=colors, alpha=0.8, edgecolor='black')
-    
-    # Add value labels on bars
-    for bar, cost in zip(bars2, costs):
-        height = bar.get_height()
-        ax2.text(bar.get_x() + bar.get_width()/2., height,
-                f'${cost:.2f}\n({cost*1000:.1f}¢)',
-                ha='center', va='bottom', fontweight='bold', fontsize=11)
-    
-    ax2.set_ylabel('Total API Cost (USD)', fontsize=12, fontweight='bold')
-    ax2.set_title('Estimated API Costs', fontsize=13, fontweight='bold')
-    ax2.grid(axis='y', alpha=0.3, linestyle='--')
-    
-    # Add savings annotation
-    savings = ((standard['total_cost_usd'] - eco['total_cost_usd']) / 
-               standard['total_cost_usd'] * 100)
-    ax2.text(0.5, max(costs) * 0.5,
-            f'💰 {savings:.1f}% Savings',
-            ha='center', fontsize=12, fontweight='bold',
-            bbox=dict(boxstyle='round', facecolor='lightgreen', alpha=0.7))
-    
-    # ========================================================================
-    # Layout and save
-    # ========================================================================
-    
-    plt.tight_layout()
-    plt.savefig('efficiency_benchmark.png', dpi=300, bbox_inches='tight')
-    print(f"✓ Visualization saved to efficiency_benchmark.png")
-    
-    return fig
+normal_ticks  = int(TOTAL_TICKS * NORMAL_FRACTION)
+anomaly_ticks = int(TOTAL_TICKS * ANOMALY_FRACTION)
 
+# — Standard System —
+std_total_latency_s = (TOTAL_TICKS * STANDARD_LATENCY_MS) / 1_000      # seconds
+std_total_cost      = TOTAL_TICKS * STANDARD_COST_PER_TICK              # USD
+
+# — Eco-Reasoning System —
+eco_latency_path_a_s = (normal_ticks  * ECO_PATH_A_LATENCY_MS) / 1_000
+eco_latency_path_b_s = (anomaly_ticks * ECO_PATH_B_LATENCY_MS) / 1_000
+eco_total_latency_s  = eco_latency_path_a_s + eco_latency_path_b_s
+eco_total_cost       = anomaly_ticks * ECO_COST_PER_TICK_B
+
+# — Savings —
+latency_reduction_pct = (1 - eco_total_latency_s / std_total_latency_s) * 100
+cost_reduction_pct    = (1 - eco_total_cost      / std_total_cost)      * 100
+
+print("=" * 60)
+print("ECO-REASONING EFFICIENCY BENCHMARK")
+print("=" * 60)
+print(f"  Ticks           : {TOTAL_TICKS:,}")
+print(f"  Normal (Path A) : {normal_ticks:,}  ({NORMAL_FRACTION*100:.0f}%)")
+print(f"  Anomaly (Path B): {anomaly_ticks:,}  ({ANOMALY_FRACTION*100:.0f}%)")
+print()
+print(f"  Standard Latency: {std_total_latency_s:,.1f} s")
+print(f"  Eco     Latency : {eco_total_latency_s:,.1f} s  ({latency_reduction_pct:.1f}% savings)")
+print()
+print(f"  Standard Cost   : ${std_total_cost:,.2f}")
+print(f"  Eco     Cost    : ${eco_total_cost:,.2f}  ({cost_reduction_pct:.1f}% savings)")
+print("=" * 60)
 
 # ============================================================================
-# Main Execution
+# Dark-Theme Palette
 # ============================================================================
 
-def run_benchmark():
-    """Run efficiency benchmark and generate report."""
-    
-    print("="*70)
-    print("EFFICIENCY BENCHMARK")
-    print("="*70)
-    
-    # Calculate metrics
-    print(f"\n[1/3] Calculating Standard Architecture metrics...")
-    standard = calculate_standard_architecture()
-    
-    print(f"[2/3] Calculating Eco-Reasoning Architecture metrics...")
-    eco = calculate_eco_reasoning()
-    
-    # Print results
-    print(f"\n[3/3] Generating comparison report...")
-    print("\n" + "="*70)
-    print("SIMULATION PARAMETERS")
-    print("="*70)
-    print(f"Total Trading Ticks: {TOTAL_TICKS:,}")
-    print(f"Low Volatility Ticks: {LOW_VOL_TICKS:,} ({LOW_VOL_TICKS/TOTAL_TICKS*100:.0f}%)")
-    print(f"High Volatility Ticks: {HIGH_VOL_TICKS:,} ({HIGH_VOL_TICKS/TOTAL_TICKS*100:.0f}%)")
-    print(f"\nSystem 1 Latency: {SYSTEM1_LATENCY*1000:.1f}ms (Free)")
-    print(f"System 2 Latency: {SYSTEM2_LATENCY*1000:.0f}ms (${SYSTEM2_COST:.4f} per call)")
-    
-    print("\n" + "="*70)
-    print("STANDARD ARCHITECTURE (All LLM)")
-    print("="*70)
-    print(f"Total Latency: {standard['total_latency_s']:.1f}s ({standard['total_latency_s']/60:.1f} minutes)")
-    print(f"Average Latency: {standard['avg_latency_ms']:.0f}ms per tick")
-    print(f"Total Cost: ${standard['total_cost_usd']:.2f}")
-    print(f"Cost per Tick: ${standard['cost_per_tick']:.6f}")
-    
-    print("\n" + "="*70)
-    print("ECO-REASONING ARCHITECTURE (Hybrid)")
-    print("="*70)
-    print(f"Low-Vol Processing: {eco['low_vol_latency']:.2f}s (System 1)")
-    print(f"High-Vol Processing: {eco['high_vol_latency']:.1f}s (System 2)")
-    print(f"Total Latency: {eco['total_latency_s']:.1f}s ({eco['total_latency_s']/60:.1f} minutes)")
-    print(f"Average Latency: {eco['avg_latency_ms']:.1f}ms per tick")
-    print(f"\nLow-Vol Cost: ${eco['low_vol_cost']:.2f} (Free)")
-    print(f"High-Vol Cost: ${eco['high_vol_cost']:.2f} (LLM)")
-    print(f"Total Cost: ${eco['total_cost_usd']:.2f}")
-    print(f"Cost per Tick: ${eco['cost_per_tick']:.6f}")
-    
-    # Calculate improvements
-    latency_improvement = ((standard['total_latency_s'] - eco['total_latency_s']) / 
-                          standard['total_latency_s'] * 100)
-    cost_savings = ((standard['total_cost_usd'] - eco['total_cost_usd']) / 
-                   standard['total_cost_usd'] * 100)
-    
-    print("\n" + "="*70)
-    print("EFFICIENCY GAINS")
-    print("="*70)
-    print(f"⚡ Latency Improvement: {latency_improvement:.1f}% faster")
-    print(f"   ({standard['total_latency_s'] - eco['total_latency_s']:.1f}s saved)")
-    print(f"\n💰 Cost Savings: {cost_savings:.1f}% cheaper")
-    print(f"   (${standard['total_cost_usd'] - eco['total_cost_usd']:.2f} saved)")
-    
-    # Extrapolate to larger scale
-    print("\n" + "="*70)
-    print("ANNUAL PROJECTION (1M ticks/day)")
-    print("="*70)
-    daily_ticks = 1_000_000
-    annual_days = 252  # Trading days
-    
-    standard_annual = standard['total_cost_usd'] * (daily_ticks / TOTAL_TICKS) * annual_days
-    eco_annual = eco['total_cost_usd'] * (daily_ticks / TOTAL_TICKS) * annual_days
-    annual_savings = standard_annual - eco_annual
-    
-    print(f"Standard Architecture: ${standard_annual:,.2f}/year")
-    print(f"Eco-Reasoning: ${eco_annual:,.2f}/year")
-    print(f"Annual Savings: ${annual_savings:,.2f}/year ({cost_savings:.1f}%)")
-    
-    # Create visualization
-    print("\n" + "="*70)
-    print("GENERATING VISUALIZATION")
-    print("="*70)
-    create_benchmark_visualization(standard, eco)
-    
-    print("\n" + "="*70)
-    print("BENCHMARK COMPLETE")
-    print("="*70)
-    print(f"\nThe Eco-Reasoning architecture is {latency_improvement:.1f}% faster")
-    print(f"and {cost_savings:.1f}% cheaper than the standard approach.")
-    print(f"\nVisualization saved to: efficiency_benchmark.png")
-    print("="*70)
+BG_DARK    = "#0D1117"
+BG_PANEL   = "#161B22"
+ACCENT_STD = "#FF4C4C"   # red  → standard (expensive)
+ACCENT_ECO = "#00C853"   # green → eco (efficient)
+TEXT_DIM   = "#8B949E"
+TEXT_BRIGHT= "#E6EDF3"
+GRID_COLOR = "#21262D"
+GOLD       = "#F9A825"
 
+# ============================================================================
+# Figure Layout
+# ============================================================================
 
-if __name__ == "__main__":
-    run_benchmark()
+fig, axes = plt.subplots(1, 2, figsize=(14, 7))
+fig.patch.set_facecolor(BG_DARK)
+
+for ax in axes:
+    ax.set_facecolor(BG_PANEL)
+    ax.tick_params(colors=TEXT_DIM, labelsize=11)
+    ax.spines[:].set_color(GRID_COLOR)
+    ax.yaxis.grid(True, color=GRID_COLOR, linewidth=0.8, linestyle="--")
+    ax.set_axisbelow(True)
+
+BAR_W   = 0.42
+X       = np.array([0.0, 1.0])
+LABELS  = ["Standard\nRAG/LLM", "Eco-Reasoning\nv2"]
+
+# ── helper to add value label above each bar ─────────────────────────────────
+def _label(ax, rect, txt, color=TEXT_BRIGHT):
+    h = rect.get_height()
+    ax.text(
+        rect.get_x() + rect.get_width() / 2,
+        h * 1.015,
+        txt,
+        ha="center", va="bottom",
+        color=color, fontsize=12, fontweight="bold",
+    )
+
+# ── savings annotation ────────────────────────────────────────────────────────
+def _savings_arrow(ax, x0, x1, y_top, pct, unit=""):
+    mid_x = (x0 + x1) / 2
+    ax.annotate(
+        "",
+        xy=(x1, y_top * 0.92), xytext=(x0, y_top * 0.92),
+        arrowprops=dict(arrowstyle="<->", color=GOLD, lw=1.8),
+    )
+    ax.text(
+        mid_x, y_top * 0.97,
+        f"−{pct:.1f}%{unit}",
+        ha="center", va="bottom",
+        color=GOLD, fontsize=13, fontweight="bold",
+    )
+
+# ============================================================================
+# Chart 1 — Total Cumulative Latency
+# ============================================================================
+
+ax1 = axes[0]
+vals_lat = [std_total_latency_s, eco_total_latency_s]
+colors_lat = [ACCENT_STD, ACCENT_ECO]
+
+bars_lat = []
+for xi, (v, c) in enumerate(zip(vals_lat, colors_lat)):
+    b = ax1.bar(xi, v, width=BAR_W, color=c, zorder=3,
+                linewidth=1.2, edgecolor=BG_DARK)
+    bars_lat.append(b[0])
+
+ax1.set_xticks(X)
+ax1.set_xticklabels(LABELS, color=TEXT_BRIGHT, fontsize=12)
+ax1.set_xlim(-0.55, 1.55)
+ax1.set_ylim(0, std_total_latency_s * 1.22)
+ax1.yaxis.set_major_formatter(FuncFormatter(lambda v, _: f"{v:,.0f} s"))
+ax1.set_ylabel("Cumulative Latency (seconds)", color=TEXT_DIM, fontsize=12)
+ax1.set_title("Total Cumulative Latency\n10,000 Ticks", color=TEXT_BRIGHT,
+              fontsize=14, fontweight="bold", pad=14)
+
+_label(ax1, bars_lat[0], f"{std_total_latency_s:,.0f} s", ACCENT_STD)
+_label(ax1, bars_lat[1], f"{eco_total_latency_s:,.1f} s", ACCENT_ECO)
+
+_savings_arrow(ax1, 0, 1, std_total_latency_s * 1.15, latency_reduction_pct)
+
+# Path B breakdown annotation on eco bar
+ax1.text(
+    1, eco_total_latency_s * 0.5,
+    f"Path A: {eco_latency_path_a_s:.2f}s\nPath B: {eco_latency_path_b_s:.1f}s",
+    ha="center", va="center",
+    color=BG_DARK, fontsize=9, fontweight="bold",
+)
+
+# ============================================================================
+# Chart 2 — Total API Cost
+# ============================================================================
+
+ax2 = axes[1]
+vals_cost = [std_total_cost, eco_total_cost]
+colors_cost = [ACCENT_STD, ACCENT_ECO]
+
+bars_cost = []
+for xi, (v, c) in enumerate(zip(vals_cost, colors_cost)):
+    b = ax2.bar(xi, v, width=BAR_W, color=c, zorder=3,
+                linewidth=1.2, edgecolor=BG_DARK)
+    bars_cost.append(b[0])
+
+ax2.set_xticks(X)
+ax2.set_xticklabels(LABELS, color=TEXT_BRIGHT, fontsize=12)
+ax2.set_xlim(-0.55, 1.55)
+ax2.set_ylim(0, std_total_cost * 1.22)
+ax2.yaxis.set_major_formatter(FuncFormatter(lambda v, _: f"${v:,.0f}"))
+ax2.set_ylabel("Total API Cost (USD)", color=TEXT_DIM, fontsize=12)
+ax2.set_title("Total API Cost\n10,000 Ticks", color=TEXT_BRIGHT,
+              fontsize=14, fontweight="bold", pad=14)
+
+_label(ax2, bars_cost[0], f"${std_total_cost:,.2f}", ACCENT_STD)
+_label(ax2, bars_cost[1], f"${eco_total_cost:,.2f}", ACCENT_ECO)
+
+_savings_arrow(ax2, 0, 1, std_total_cost * 1.15, cost_reduction_pct)
+
+ax2.text(
+    1, eco_total_cost * 0.5,
+    f"{anomaly_ticks:,} LLM calls\n({ANOMALY_FRACTION*100:.0f}% of ticks)",
+    ha="center", va="center",
+    color=BG_DARK, fontsize=9, fontweight="bold",
+)
+
+# ============================================================================
+# Figure-level annotations
+# ============================================================================
+
+fig.suptitle(
+    "Eco-Reasoning v2 — Efficiency vs Standard RAG/LLM",
+    color=TEXT_BRIGHT, fontsize=17, fontweight="bold", y=1.01,
+)
+
+# Subtitle / simulation config
+fig.text(
+    0.5, 0.97,
+    f"Simulation: {TOTAL_TICKS:,} ticks  |  "
+    f"{NORMAL_FRACTION*100:.0f}% Normal (Path A · {ECO_PATH_A_LATENCY_MS} ms)  |  "
+    f"{ANOMALY_FRACTION*100:.0f}% Anomaly (Path B · {ECO_PATH_B_LATENCY_MS:.0f} ms)",
+    ha="center", color=TEXT_DIM, fontsize=10,
+)
+
+# Legend
+legend_patches = [
+    mpatches.Patch(color=ACCENT_STD, label="Standard RAG/LLM  — all ticks use LLM"),
+    mpatches.Patch(color=ACCENT_ECO, label="Eco-Reasoning v2   — LLM only on anomalies"),
+    mpatches.Patch(color=GOLD,       label="Savings (Eco vs Standard)"),
+]
+fig.legend(
+    handles=legend_patches,
+    loc="lower center", ncol=3,
+    frameon=True, framealpha=0.15,
+    facecolor=BG_PANEL, edgecolor=GRID_COLOR,
+    labelcolor=TEXT_BRIGHT, fontsize=10,
+    bbox_to_anchor=(0.5, -0.05),
+)
+
+plt.tight_layout(rect=[0, 0.03, 1, 0.97])
+
+# ============================================================================
+# Save
+# ============================================================================
+
+OUT = "efficiency_benchmark.png"
+plt.savefig(OUT, dpi=160, bbox_inches="tight", facecolor=BG_DARK)
+print(f"\n✅  Saved → {OUT}")
+plt.close()

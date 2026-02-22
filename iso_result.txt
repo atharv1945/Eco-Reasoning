@@ -1,0 +1,16 @@
+============================================================
+  System 1 — Isolation Test
+  Function : fast_path_inference(tick_data: np.ndarray)
+  Input    : 1-D array of 100 raw Close prices
+  Runs     : 100
+  Threshold: 5.0 ms
+============================================================
+
+  Avg  latency : 0.548 ms
+  P50  latency : 0.513 ms
+  P95  latency : 0.749 ms
+  P99  latency : 1.016 ms
+  Last output  : prediction=-0.103522, entropy=1.3950 bits
+------------------------------------------------------------
+  ✅ Isolation Test Passed (Avg Latency: 0.55 ms)
+============================================================

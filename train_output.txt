@@ -1,0 +1,16 @@
+D:\Desktop Data\ML\Projects\Eco-Reasoning\venv\Lib\site-packages\sklearn\utils\validation.py:2691: UserWarning: X does not have valid feature names, but LGBMRegressor was fitted with feature names
+  warnings.warn(
+  Loading data from financial_data.csv …
+  Rows after preparation: 999
+
+============================================================
+  System 1 — LightGBM on DWT-Denoised Close
+============================================================
+  Training RMSE : 1.183976
+Traceback (most recent call last):
+  File "D:\Desktop Data\ML\Projects\Eco-Reasoning\train_system1.py", line 159, in <module>
+    print(f"  \u2705 Model Saved: {MODEL_PATH}")
+  File "C:\Users\athar\AppData\Local\Programs\Python\Python312\Lib\encodings\cp1252.py", line 19, in encode
+    return codecs.charmap_encode(input,self.errors,encoding_table)[0]
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+UnicodeEncodeError: 'charmap' codec can't encode character '\u2705' in position 2: character maps to <undefined>
