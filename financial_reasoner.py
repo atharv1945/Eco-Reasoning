@@ -56,30 +56,13 @@ TOTAL_BUDGET = 6.0  # 6 seconds total budget
 # System Prompt (CFA Rubric)
 # ============================================================================
 
-SYSTEM_PROMPT = """You are Fin-R1, a specialized financial reasoning engine. You DO NOT chat. You output ONLY a JSON object analyzing the impact of the news on the asset price.
+SYSTEM_PROMPT = """You are a Senior Financial Analyst. Answer the following user query 
+using the provided news and price context.
 
-Rubric:
-1. Event: Classify the event (Macro/Earnings/Geopolitical/Noise)
-2. Mechanism: Step-by-step causal chain (e.g., A->B->C)
-3. Consensus: Does this surprise the market?
-4. Prediction: Bullish/Bearish/Neutral/Mixed
-5. Confidence: 0-100
-
-Output Format (JSON only, no markdown):
-{
-  "event_class": "Macro|Earnings|Geopolitical|Noise",
-  "mechanism_trace": "Step-by-step causal chain",
-  "consensus_check": "Market expectation analysis",
-  "expected_direction": "Bullish|Bearish|Neutral|Mixed",
-  "confidence": 0-100
-}
-
-Rules:
-- Be concise and precise
-- Use financial terminology
-- Explain the causal mechanism clearly
-- Calibrate confidence based on signal clarity
-- Noise events should have confidence < 50"""
+1. Show your step-by-step reasoning (Causal Trace).
+2. Perform all necessary numerical calculations.
+3. If the answer is a percentage, provide it as a decimal (e.g., 0.05 for 5%).
+4. CRITICAL: End your response with [[FINAL_VALUE: <number>]]."""
 
 
 # ============================================================================
@@ -208,29 +191,38 @@ def generate_financial_reasoning(
         result = response.json()
         content = result['choices'][0]['message']['content']
         
-        # Parse JSON from response
+        # Parse JSON from response (fallback to text if strict JSON formatting is dropped)
         try:
-            reasoning = json.loads(content)
+            if content.strip().startswith('{') or content.strip().startswith('['):
+                reasoning = json.loads(content)
+            else:
+                raise json.JSONDecodeError("Not JSON", content, 0)
         except json.JSONDecodeError:
             # Try to extract JSON from markdown code blocks
             if "```json" in content:
-                content = content.split("```json")[1].split("```")[0].strip()
-                reasoning = json.loads(content)
+                content_inner = content.split("```json")[1].split("```")[0].strip()
+                try:
+                    reasoning = json.loads(content_inner)
+                except:
+                    reasoning = {"mechanism_trace": content, "reasoning": content, "event_class": "Unknown"}
             elif "```" in content:
-                content = content.split("```")[1].split("```")[0].strip()
-                reasoning = json.loads(content)
+                content_inner = content.split("```")[1].split("```")[0].strip()
+                try:
+                    reasoning = json.loads(content_inner)
+                except:
+                    reasoning = {"mechanism_trace": content, "reasoning": content, "event_class": "Unknown"}
             else:
-                raise
+                reasoning = {"mechanism_trace": content, "reasoning": content, "event_class": "Unknown"}
         
         # Add metadata
         reasoning['latency_ms'] = int((time.time() - start_time) * 1000)
         reasoning['source'] = 'api'
         
-        # Validate required fields
-        required_fields = ['event_class', 'mechanism_trace', 'consensus_check', 'confidence']
+        # Validate required fields (fill with defaults if standard JSON was bypassed)
+        required_fields = ['event_class', 'mechanism_trace', 'consensus_check', 'confidence', 'expected_direction']
         for field in required_fields:
             if field not in reasoning:
-                raise ValueError(f"Missing required field: {field}")
+                reasoning[field] = "Unknown" if field != 'confidence' else 50
         
         return reasoning
         
