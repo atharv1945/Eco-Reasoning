@@ -27,11 +27,11 @@ def test_path_a():
     print("="*70)
     
     payload = {
-        "ticker": "AAPL",
-        "volatility_index": 15.0,  # Low volatility
-        "news_text": "Apple announces minor product update"
+    "ticker": "AAPL",
+    "volatility_index": 15.0,
+    "news_text": "Apple announces minor product update",
+    "recent_prices": [150.0, 150.1, 150.2, 149.9, 150.0, 150.1, 150.2, 150.3, 150.4, 150.5]
     }
-    
     print(f"Request: {json.dumps(payload, indent=2)}")
     
     response = requests.post(f"{BASE_URL}/inference", json=payload)
@@ -48,7 +48,8 @@ def test_path_b():
     payload = {
         "ticker": "SPY",
         "volatility_index": 45.0,  # High volatility
-        "news_text": "Fed signals 75bps rate hike due to inflation"
+        "news_text": "Fed signals 75bps rate hike due to inflation",
+        "recent_prices": [440.0, 438.5, 435.0, 432.1, 430.0, 428.0, 425.0, 422.0, 420.0, 418.0] 
     }
     
     print(f"Request: {json.dumps(payload, indent=2)}")
@@ -67,7 +68,8 @@ def test_edge_case():
     payload = {
         "ticker": "TSLA",
         "volatility_index": 25.0,  # Exactly at threshold
-        "news_text": "Tesla reports quarterly earnings"
+        "news_text": "Tesla reports quarterly earnings",
+        "recent_prices": [200.0, 201.0, 202.0, 201.5, 203.0, 204.0, 205.0, 206.0, 207.0, 208.0] 
     }
     
     print(f"Request: {json.dumps(payload, indent=2)}")

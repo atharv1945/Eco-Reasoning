@@ -2,17 +2,12 @@
 Synthetic Golden Dataset Generator for Financial Reasoning Evaluation
 ======================================================================
 
-This script generates a high-quality evaluation dataset for testing financial
-reasoning systems, particularly for event-driven stock prediction models.
-
 The dataset includes:
 - 5 Macro events (monetary policy, economic indicators)
 - 5 Earnings Misses (company performance disappointments)
 - 5 Geopolitical Shocks (international conflicts, policy changes)
 - 5 Noise/Irrelevant events (should result in Neutral predictions)
 
-Author: Senior Data Architect
-Date: 2026-02-11
 """
 
 import json
@@ -29,10 +24,6 @@ def generate_golden_dataset() -> List[Dict]:
     """
     
     dataset = []
-    
-    # ========================================================================
-    # MACRO EVENTS (5 examples)
-    # ========================================================================
     
     macro_events = [
         {
