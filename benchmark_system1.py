@@ -39,28 +39,37 @@ def _get_booster() -> lgb.Booster:
 # ---------------------------------------------------------------------------
 
 def fast_path_inference(tick_data: np.ndarray) -> dict:
-    """Run the full System-1 fast-path on a single tick window.
+    """Run the full System-1 fast-path on a log-return window.
 
     Parameters
     ----------
     tick_data : np.ndarray
-        1-D array representing a window of raw Close prices.
+        1-D array of log returns: r_t = ln(P_t / P_{t-1}).
+        Typically WINDOW_SIZE=16 values.
 
     Returns
     -------
     dict
-        ``prediction`` — scalar model output for the last denoised tick.
-        ``entropy``    — Shannon entropy (bits) of predictions over the window.
+        ``prediction`` -- predicted next log return (last tick).
+                          Convert to price: P_next = P_last * exp(prediction).
+        ``entropy``    -- Shannon entropy (bits) of the 16 per-tick
+                          predictions.  High entropy = regime uncertainty;
+                          threshold 1.5 bits triggers Path B (LLM).
     """
-    # Step 1: Wavelet denoising
+    # Step 1: Wavelet denoising of the log-return window
     denoised = wavelet_denoising(tick_data)
 
-    # Step 2: LightGBM prediction (full window → vector of predictions)
+    # Step 2: LightGBM prediction
+    # Model was trained with 1 feature per sample (denoised log return).
+    # reshape(-1, 1) -> 16 independent predictions, one per tick.
     booster = _get_booster()
-    predictions = booster.predict(denoised.reshape(-1, 1))
+    predictions = booster.predict(denoised.reshape(-1, 1))  # shape (16,)
 
-    # Step 3: Entropy of the prediction distribution
-    entropy = entropy_from_predictions(predictions, n_bins=10)
+    # Step 3: Shannon entropy of prediction distribution.
+    # n_bins=6 is optimal for 16 data points (max = log2(6) ~ 2.58 bits).
+    # Low entropy (~0 bits)  -> stable trend, route to Path A (fast math).
+    # High entropy (>1.5 bits) -> model uncertain, route to Path B (LLM).
+    entropy = entropy_from_predictions(predictions, n_bins=6)
 
     return {
         "prediction": float(predictions[-1]),
@@ -121,10 +130,10 @@ if __name__ == "__main__":
     print("-" * 60)
 
     if avg_ms < LATENCY_THRESHOLD_MS:
-        print(f"  ✅ MILESTONE PASS: System 1 meets Latency Requirements")
+        print(f"   MILESTONE PASS: System 1 meets Latency Requirements")
         print(f"     ({avg_ms:.3f} ms < {LATENCY_THRESHOLD_MS} ms)")
     else:
-        print(f"  ❌ FAIL: Optimization Needed")
+        print(f"   FAIL: Optimization Needed")
         print(f"     ({avg_ms:.3f} ms >= {LATENCY_THRESHOLD_MS} ms)")
 
     print("=" * 60)
