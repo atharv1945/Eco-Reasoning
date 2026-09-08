@@ -1,13 +1,27 @@
 """
-Live Market Simulator - Terminal Demo
-======================================
-Real-time visualization of the Eco-Reasoning gateway in action.
+live_market_sim.py — Eco-Reasoning Gateway  |  Live Market Feed Demo
+=====================================================================
+What this file does
+-------------------
+This script simulates a live financial market feed to demonstrate the
+dual-path architecture of the Eco-Reasoning Gateway:
 
-Features:
-- 90% low-volatility ticks → Fast System 1 (green)
-- 10% high-volatility ticks → Reasoning System 2 (red)
-- News alerts with LLM analysis
-- Beautiful terminal UI using Rich library
+  Path A — Fast (System 1, ~5 ms)
+      Handles ~90 % of all ticks.  Low-volatility prices are routed
+      directly to a LightGBM quantitative model that emits a short-
+      term price-change prediction and a directional signal
+      (Bullish / Neutral / Bearish) in milliseconds.
+
+  Path B — Reasoning (System 2, ~850 ms)
+      Handles ~10 % of ticks where the entropy score exceeds a
+      threshold (i.e. a significant news event is detected).  The
+      tick is passed to a RAG + LLM pipeline that reads relevant
+      financial news, builds a causal reasoning chain, and outputs
+      a directional prediction with a confidence score.
+
+The terminal output colour-codes both paths (green = fast,
+red = reasoning) and prints live statistics every 20 ticks.
+Press Ctrl-C at any time to stop and see final statistics.
 """
 
 import random
@@ -97,14 +111,25 @@ def generate_low_vol_tick():
     ticker = random.choice(TICKERS)
     vol = random.randint(5, 20)
     latency = random.randint(3, 7)
-    
+
+    # Simulated LightGBM quant prediction: small price-change percentage
+    price_change = round(random.gauss(0.002, 0.008), 4)   # mean ~+0.2 %, σ ~0.8 %
+    if price_change > 0.005:
+        signal = "Bullish"
+    elif price_change < -0.005:
+        signal = "Bearish"
+    else:
+        signal = "Neutral"
+
     return {
         "time": get_current_time(),
         "ticker": ticker,
         "volatility": vol,
         "path": "FAST",
         "latency_ms": latency,
-        "is_news": False
+        "is_news": False,
+        "price_change": price_change,
+        "signal": signal,
     }
 
 
@@ -130,20 +155,31 @@ def format_tick_row(tick):
     """Format a tick as a colored row."""
     if tick["is_news"]:
         # Red for high-volatility reasoning path
-        color = "red"
         style = "bold red"
+        row = Text()
+        row.append(f"[{tick['time']}] ", style="cyan")
+        row.append(f"Ticker: {tick['ticker']:<6} | ", style=style)
+        row.append(f"Vol: {tick['volatility']:<3} | ", style=style)
+        row.append(f"Path: {tick['path']:<10} | ", style=style)
+        row.append(f"Latency: {tick['latency_ms']}ms", style=style)
     else:
         # Green for low-volatility fast path
-        color = "green"
         style = "bold green"
-    
-    row = Text()
-    row.append(f"[{tick['time']}] ", style="cyan")
-    row.append(f"Ticker: {tick['ticker']:<6} | ", style=style)
-    row.append(f"Vol: {tick['volatility']:<3} | ", style=style)
-    row.append(f"Path: {tick['path']:<10} | ", style=style)
-    row.append(f"Latency: {tick['latency_ms']}ms", style=style)
-    
+        pc = tick["price_change"]
+        sign = "+" if pc >= 0 else ""
+        sig = tick["signal"]
+        sig_color = "bright_green" if sig == "Bullish" else ("bright_red" if sig == "Bearish" else "yellow")
+        sig_arrow = "↗" if sig == "Bullish" else ("↘" if sig == "Bearish" else "→")
+
+        row = Text()
+        row.append(f"[{tick['time']}] ", style="cyan")
+        row.append(f"Ticker: {tick['ticker']:<6} | ", style=style)
+        row.append(f"Vol: {tick['volatility']:<3} | ", style=style)
+        row.append(f"Path: {tick['path']:<10} | ", style=style)
+        row.append(f"Latency: {tick['latency_ms']}ms | ", style=style)
+        row.append(f"Pred: {sign}{pc:.2%} ", style=sig_color)
+        row.append(f"[{sig} {sig_arrow}]", style=f"bold {sig_color}")
+
     return row
 
 
