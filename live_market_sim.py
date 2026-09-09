@@ -139,7 +139,11 @@ def generate_high_vol_tick():
     vol = random.randint(35, 55)
     latency = random.randint(750, 950)
     news = random.choice(NEWS_EVENTS)
-    
+
+    # High-volatility price-change: larger magnitude (~±2%), direction-biased by the LLM prediction
+    direction_bias = 1 if news["prediction"] == "Bullish" else -1
+    price_change = round(direction_bias * abs(random.gauss(0.018, 0.010)), 4)
+
     return {
         "time": get_current_time(),
         "ticker": ticker,
@@ -147,7 +151,8 @@ def generate_high_vol_tick():
         "path": "REASONING",
         "latency_ms": latency,
         "is_news": True,
-        "news": news
+        "news": news,
+        "price_change": price_change,
     }
 
 
@@ -156,12 +161,22 @@ def format_tick_row(tick):
     if tick["is_news"]:
         # Red for high-volatility reasoning path
         style = "bold red"
+        news = tick["news"]
+        pred = news["prediction"]
+        conf = news["confidence"]
+        pred_color = "bright_green" if pred == "Bullish" else "bright_red"
+        pred_arrow = "↗" if pred == "Bullish" else "↘"
+
         row = Text()
         row.append(f"[{tick['time']}] ", style="cyan")
         row.append(f"Ticker: {tick['ticker']:<6} | ", style=style)
-        row.append(f"Vol: {tick['volatility']:<3} | ", style=style)
+        row.append(f"Volatility: {tick['volatility']:<3} | ", style=style)
         row.append(f"Path: {tick['path']:<10} | ", style=style)
-        row.append(f"Latency: {tick['latency_ms']}ms", style=style)
+        pc = tick["price_change"]
+        sign = "+" if pc >= 0 else ""
+        row.append(f"Latency: {tick['latency_ms']}ms | ", style=style)
+        row.append(f"Pred: {sign}{pc:.2%} {pred} {pred_arrow}", style=f"bold {pred_color}")
+        row.append(f" | Confidence: {conf}%", style="bold yellow")
     else:
         # Green for low-volatility fast path
         style = "bold green"
@@ -174,7 +189,7 @@ def format_tick_row(tick):
         row = Text()
         row.append(f"[{tick['time']}] ", style="cyan")
         row.append(f"Ticker: {tick['ticker']:<6} | ", style=style)
-        row.append(f"Vol: {tick['volatility']:<3} | ", style=style)
+        row.append(f"Volatility: {tick['volatility']:<3} | ", style=style)
         row.append(f"Path: {tick['path']:<10} | ", style=style)
         row.append(f"Latency: {tick['latency_ms']}ms | ", style=style)
         row.append(f"Pred: {sign}{pc:.2%} ", style=sig_color)
