@@ -1,0 +1,26 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+venv/
+.pytest_cache/
+
+# Environment Variables
+.env
+
+# Database & Storage
+financial_news_db/
+test_financial_news_db/
+empty_test_db/
+*.db
+*.sqlite
+
+# Generated Artifacts & Logs
+evaluation_*.json
+audit_logs.md
+efficiency_benchmark.png
+*.log
+
+# IDE specific
+.vscode/
+.idea/

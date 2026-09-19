@@ -1,0 +1,32 @@
+============================= test session starts =============================
+platform win32 -- Python 3.12.8, pytest-9.0.2, pluggy-1.6.0 -- D:\Desktop Data\ML\Projects\Eco-Reasoning\venv\Scripts\python.exe
+cachedir: .pytest_cache
+rootdir: D:\Desktop Data\ML\Projects\Eco-Reasoning
+plugins: anyio-4.12.1
+collecting ... collected 6 items
+
+test_gateway_integration.py::TestEntropyDrivenRouting::test_path_a_low_entropy PASSED
+test_gateway_integration.py::TestEntropyDrivenRouting::test_path_b_high_entropy PASSED
+test_gateway_integration.py::TestEntropyDrivenRouting::test_path_a_high_entropy_no_news PASSED
+test_gateway_integration.py::TestGatewayResilience::test_quant_model_failure PASSED
+test_gateway_integration.py::TestGatewayEndpoints::test_health_endpoint PASSED
+test_gateway_integration.py::TestGatewayEndpoints::test_root_endpoint PASSED
+
+============================== warnings summary ===============================
+gateway.py:48
+  D:\Desktop Data\ML\Projects\Eco-Reasoning\gateway.py:48: PydanticDeprecatedSince20: Support for class-based `config` is deprecated, use ConfigDict instead. Deprecated in Pydantic V2.0 to be removed in V3.0. See Pydantic V2 Migration Guide at https://errors.pydantic.dev/2.12/migration/
+    class MarketRequest(BaseModel):
+
+test_gateway_integration.py::TestEntropyDrivenRouting::test_path_a_low_entropy
+test_gateway_integration.py::TestEntropyDrivenRouting::test_path_b_high_entropy
+test_gateway_integration.py::TestEntropyDrivenRouting::test_path_a_high_entropy_no_news
+test_gateway_integration.py::TestGatewayResilience::test_quant_model_failure
+  D:\Desktop Data\ML\Projects\Eco-Reasoning\gateway.py:287: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+    result["timestamp"] = datetime.utcnow().isoformat()
+
+test_gateway_integration.py::TestGatewayEndpoints::test_health_endpoint
+  D:\Desktop Data\ML\Projects\Eco-Reasoning\gateway.py:306: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+    timestamp=datetime.utcnow().isoformat()
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+======================= 6 passed, 6 warnings in 54.61s ========================
