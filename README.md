@@ -344,14 +344,14 @@ SNR = 10 * log10( Var(clean_signal) / Var(noise) )   [dB]
 
 | Metric | FinLSPM (3B params) | Eco-Reasoning | Improvement |
 |--------|---------------------|---------------|-------------|
-| NDX MAE | $148.66 | $26.55 (Sys-1) / $24.42 (Hybrid) | **82.14% lower** |
-| BTC MAE | $1,145.52 | $1,158.43 (Sys-1) / $1,066.02 (Hybrid) | Comparable |
-| Inference Latency | ~1,500 ms (always-LLM) | ~5 ms Path A / ~850 ms Path B | ~300x faster on 90% of ticks |
-| Parameters | ~3 Billion | ~3,100 | ~967,742x fewer |
-| Model Size | ~6 GB | 183.3 KB | ~34,322x smaller |
-| Training Time | <1 hr on 4x RTX 3090 | 0.6s on CPU | ~5,543x faster |
-| Inference RAM | 16 GB x 4 GPUs | ~50 MB | ~1,301x less |
-| Hardware Needed | 4x RTX 3090 | Any CPU | GPU-free |
+| NDX MAE | $148.66 | $62.52 (Sys-1) | **57.94% lower** |
+| BTC MAE | $1,145.52 | $1,099.57 (Sys-1) | **4.01% lower** (Comparable) |
+| Inference Latency | ~1,500 ms (always-LLM) | ~5 ms Path A / ~850 ms Path B | ~300x faster on >90% of ticks |
+| LLM Architecture | 3B Params (evaluates every tick) | 70B Params (routes only on high entropy) | Massive routing efficiency |
+| Base Quant Model Size | ~6 GB | 608.2 KB (LightGBM) | ~10,000x smaller baseline |
+| Training Time | <1 hr on 4x RTX 3090 | 1.3s on CPU | ~2,700x faster |
+| Inference RAM | 16 GB x 4 GPUs | ~50 MB (Path A) | ~1,301x less |
+| Hardware Needed | 4x RTX 3090 | Any CPU (Path A) | GPU-free for 99% of ticks |
 
 ### 7b. System 1 Latency Benchmark (1,000 iterations, window=100 ticks)
 
@@ -362,13 +362,13 @@ SNR = 10 * log10( Var(clean_signal) / Var(noise) )   [dB]
 | P95 | < 8 ms |
 | P99 | < 12 ms |
 
-### 7c. Ablation Study (N = 2,000 sliding windows)
+### 7c. Ablation Study (N = 375 sliding windows)
 
 | Component | NDX MAE | BTC MAE | Path-B Rate |
 |-----------|---------|---------|------------|
-| System 1 Only | $26.55 | $1,158.43 | 0% |
-| Full Hybrid (System 1 + LLM gate) | $24.42 | $1,066.02 | 98.2% |
-| **LLM gate gain** | **+8.02%** | **+7.98%** | — |
+| System 1 Only | $62.52 | $1,099.57 | 0.0% |
+| Full Hybrid (Measured Subsample) | $62.10 | $1,134.30 | (forced sample) |
+| **LLM gate gain** | **+0.68%** | **-3.16%** | — |
 
 ### 7d. Entropy Threshold Sensitivity Sweep (tau)
 
@@ -396,11 +396,11 @@ tau = **1.5 bits** is Pareto-optimal — minimises MAE while keeping Path-B rate
 | Metric | FinLSPM | Eco-Reasoning | Reduction |
 |--------|---------|---------------|-----------|
 | Architecture | Transformer (Dense) | LightGBM + Entropy Gate | — |
-| Parameters | ~3B | ~3,100 | 99.9999% smaller |
-| Model File | ~6 GB | 183.3 KB | ~34,322x smaller |
-| Inference RAM | 16 GB x 4 GPUs | ~50 MB | ~1,301x less |
-| Training Time | <1 hr (4x RTX 3090) | 0.6s (CPU) | ~5,543x faster |
-| Hardware | 4x RTX 3090 | Any CPU | No GPU required |
+| LLM Utilization | Every tick | High-entropy anomaly ticks only | 99% fewer API calls |
+| Base Quant Model | ~6 GB | 608.2 KB | ~10,000x smaller |
+| Inference RAM | 16 GB x 4 GPUs | ~50 MB (Path A) | ~1,301x less |
+| Training Time | <1 hr (4x RTX 3090) | 1.3s (CPU) | ~2,700x faster |
+| Hardware | 4x RTX 3090 | Any CPU | No GPU required for Path A |
 
 ---
 
@@ -522,7 +522,7 @@ Eco-Reasoning/
 | 4 | **Full Explainability** | Every response includes routing decision, entropy score, causal mechanism trace, and event classification — fully auditable for regulatory compliance. |
 | 5 | **Fault Tolerance** | Circuit-breaker guarantees uptime: any LLM failure silently falls back to System 1 with a warning field in the response. |
 | 6 | **RAG-Enhanced Context** | System 2 retrieves historical analogues from ChromaDB to contextualize novel events — not simply zero-shot LLM inference. |
-| 7 | **Statistically Significant NDX Results** | 82.14% lower MAE vs. FinLSPM on NASDAQ-100, confirmed by Welch t-test (p = 0.000). |
+| 7 | **Statistically Significant NDX Results** | 57.94% lower MAE vs. FinLSPM on NASDAQ-100, outperforming the naive baseline by 16%. |
 | 8 | **Dual LLM Backend** | Supports both Groq (LLaMA-3.3-70b) and DeepSeek as drop-in backends, configurable via .env. |
 
 ### Cons
@@ -752,11 +752,11 @@ The Eco-Reasoning system validates the **Neuro-Symbolic Efficiency Thesis**:
 
 | Result | Value |
 |--------|-------|
-| NDX MAE improvement vs. FinLSPM | 82.14% lower (statistically significant, p = 0.000) |
+| NDX MAE improvement vs. FinLSPM | 57.94% lower (statistically significant) |
 | System 1 P50 latency | < 2 ms (milestone: < 5 ms — passed) |
-| Model size reduction | 34,322x smaller than FinLSPM |
-| Training speed gain | 5,543x faster, runs on CPU |
-| LLM gate accuracy gain | +8.02% MAE improvement over System 1 alone |
+| System 1 vs Naive Baseline | Outperforms naive by 16.33% |
+| Training speed gain | ~2,700x faster, runs on CPU |
+| LLM gate accuracy gain | Negligible (+0.68%) — primary value is qualitative causal tracing |
 | Optimal entropy threshold | tau = 1.5 bits (confirmed by formal sweep) |
 | Uptime guarantee | 100% via circuit-breaker fallback to System 1 |
 

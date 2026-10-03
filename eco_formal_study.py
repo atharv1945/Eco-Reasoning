@@ -23,11 +23,15 @@ ENTROPY_THRESHOLD = 1.5   # bits
 COST_LLM          = 0.001
 COST_MATH         = 0.000
 
-# FinLSPM (monolith – always-LLM baseline) from previous unoptimized run
-FINLSPM_NDX_MAE  = 2040.91
-FINLSPM_BTC_MAE  = 2472.26
-FINLSPM_LATENCY  = 1500.0    # ms (always calls LLM)
-FINLSPM_COST     = 1.000     # $1 per 1000 ticks @ $0.001 each
+# FinLSPM published baselines — Source: Expert Systems With Applications 300 (2026) 130294
+# IMPORTANT: The old constants FINLSPM_NDX_MAE=2040.91 and FINLSPM_BTC_MAE=2472.26
+# do NOT appear anywhere in the FinLSPM paper under any dataset or configuration.
+# They have been REMOVED and replaced with the correct Table 3 values below.
+# DO NOT re-introduce 2040.91 or 2472.26 anywhere in this codebase.
+FINLSPM_NDX_MAE  = 148.6595  # Table 3, NASDAQ-100 mean MAE
+FINLSPM_BTC_MAE  = 1145.5242 # Table 3, Bitcoin mean MAE
+FINLSPM_LATENCY  = 1500.0    # ms — assumed from paper architecture description (not stated explicitly)
+FINLSPM_COST     = 1.000     # $1 per 1000 ticks @ $0.001 each — assumed, not stated in paper
 
 # Headlines for Task 2 data injection (keyed by event label)
 HEADLINES = {

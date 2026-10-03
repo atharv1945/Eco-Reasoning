@@ -193,28 +193,50 @@ def path_b_response(
     """
     Path B: RAG-enhanced LLM reasoning, enriched with System 1 quant baseline.
 
-    Uses financial_reasoner for LLM analysis and appends System 1's
-    prediction so the consumer always has a quant anchor alongside the
-    text-based reasoning.
+    FIX 1.5: Now ACTUALLY calls retrieve_relevant_context() before reasoning
+    so that "RAG-enhanced" is true of the live system, not just the offline module.
 
     Includes circuit breaker: on any error, falls back to Path A.
     """
     try:
         from financial_reasoner import generate_financial_reasoning
 
+        # ── FIX 1.5: Retrieve relevant historical context from ChromaDB ──────
+        rag_context = []
+        rag_used    = False
+        if RAG_AVAILABLE:
+            try:
+                vdb = get_vector_db()
+                if vdb is not None:
+                    rag_context = retrieve_relevant_context(
+                        query=news_text,
+                        db=vdb,
+                        n_results=3,
+                    )
+                    rag_used = len(rag_context) > 0
+            except Exception as rag_exc:
+                print(f"Warning: RAG retrieval failed, proceeding without context: {rag_exc}")
+
         # Build market context to pass alongside the news
         market_data = {
             "volatility": f"{quant['entropy']:.3f} bits (entropy)",
             "regime": "High Uncertainty" if quant["entropy"] > ENTROPY_THRESHOLD else "Stable",
-            "quant_forecast": f"{quant['prediction']:+.6f} (next-tick Δ)",
+            "quant_forecast": f"{quant['prediction']:+.6f} (next-tick delta)",
         }
 
-        llm_result = generate_financial_reasoning(news_text, market_data)
+        # ── Use RAG-enhanced analysis if context was retrieved ────────────────
+        if rag_used and RAG_AVAILABLE:
+            from rag_financial_pipeline import analyze_with_context
+            llm_result = analyze_with_context(news_text, rag_context, market_data)
+        else:
+            llm_result = generate_financial_reasoning(news_text, market_data)
 
         latency_ms = (time.time() - start_time) * 1_000
 
+        source_tag = "System 2 (RAG+LLM)" if rag_used else "System 2 (LLM, no RAG context)"
+
         return {
-            "source": "System 2 (RAG+LLM) + System 1 Quant Baseline",
+            "source": f"{source_tag} + System 1 Quant Baseline",
             "prediction": llm_result.get("expected_direction", "Unknown"),
             "confidence": llm_result.get("confidence"),
             "event_class": llm_result.get("event_class"),
