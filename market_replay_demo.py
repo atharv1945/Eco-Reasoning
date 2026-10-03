@@ -267,7 +267,8 @@ def get_relevant_events(ticker: str, df: pd.DataFrame) -> dict:
 # ── Find the closest date in the index to a target date ─────────────────────
 def nearest_idx(df: pd.DataFrame, target_str: str) -> int | None:
     target = pd.Timestamp(target_str)
-    diffs = (df.index - target).abs()
+    # Convert to Series first — TimedeltaIndex.abs() removed in pandas 3.x
+    diffs = pd.Series(df.index - target).abs()
     if diffs.min() > pd.Timedelta(days=5):
         return None
     return int(diffs.argmin())

@@ -1,4 +1,4 @@
-commit# Eco-Reasoning: Remediation Results and Findings
+# Eco-Reasoning: Remediation Results and Findings
 
 As requested, I have systematically dismantled the fabricated numbers, rewritten the stress test to properly evaluate non-overlapping data and actual LLM causal reasoning, and gathered the **true** numbers.
 
