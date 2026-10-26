@@ -26,7 +26,7 @@ import lightgbm as lgb
 def calculate_prediction_entropy(
     model_path: str,
     data_window: Union[np.ndarray, list],
-    n_bins: int = 10,
+    n_bins: int = 6,
 ) -> float:
     """Compute Shannon entropy of binned model predictions.
 
@@ -37,14 +37,18 @@ def calculate_prediction_entropy(
     data_window : array-like, shape (n_samples,) or (n_samples, n_features)
         Feature window to predict on.  If 1-D, it is reshaped to a single-
         feature column (matching the System-1 denoised-Close setup).
-    n_bins : int, default ``10``
+    n_bins : int, default ``6``
         Number of equal-width histogram buckets for discretising predictions.
+        Six bins is the project standard: a 16-tick window gives ~2-3 samples
+        per bucket, and the maximum entropy is log₂(6) ≈ 2.58 bits, which
+        places the routing threshold of 1.5 bits at roughly the 58th percentile
+        of the maximum — a well-calibrated operating point.
 
     Returns
     -------
     float
         Shannon entropy in bits (log₂).  Range: 0 (all predictions in one
-        bucket) to log₂(n_bins) ≈ 3.32 for 10 bins (uniform spread).
+        bucket) to log₂(6) ≈ 2.58 bits (uniform spread across 6 bins).
     """
     # ---- Load model ---------------------------------------------------------
     booster = lgb.Booster(model_file=model_path)
@@ -71,7 +75,7 @@ def calculate_prediction_entropy(
 
 def entropy_from_predictions(
     predictions: Union[np.ndarray, list],
-    n_bins: int = 10,
+    n_bins: int = 6,
 ) -> float:
     """Compute Shannon entropy directly from a prediction array (no model).
 
@@ -81,8 +85,10 @@ def entropy_from_predictions(
     ----------
     predictions : array-like
         1-D array of prediction values.
-    n_bins : int, default ``10``
-        Number of histogram buckets.
+    n_bins : int, default ``6``
+        Number of histogram buckets.  The project standard is 6 bins
+        (max entropy log₂(6) ≈ 2.58 bits).  This matches the value used
+        in ``fast_path_inference`` and the routing threshold of 1.5 bits.
 
     Returns
     -------
@@ -114,8 +120,8 @@ if __name__ == "__main__":
     volatile_preds = np.random.uniform(-2.0, 2.0, size=100)
 
     # Compute entropy directly from prediction arrays
-    entropy_stable = entropy_from_predictions(stable_preds, n_bins=10)
-    entropy_volatile = entropy_from_predictions(volatile_preds, n_bins=10)
+    entropy_stable   = entropy_from_predictions(stable_preds,   n_bins=6)
+    entropy_volatile = entropy_from_predictions(volatile_preds, n_bins=6)
 
     # Also demonstrate the model-based function
     print("=" * 60)
@@ -136,7 +142,7 @@ if __name__ == "__main__":
     print("-" * 60)
     print(f"  Stable  predictions entropy : {entropy_stable:.4f} bits")
     print(f"  Volatile predictions entropy: {entropy_volatile:.4f} bits")
-    print(f"  Max possible (10 bins)      : {np.log2(10):.4f} bits")
+    print(f"  Max possible (6 bins)       : {np.log2(6):.4f} bits")
     print("-" * 60)
 
     if entropy_volatile > entropy_stable:

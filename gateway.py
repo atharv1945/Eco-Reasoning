@@ -55,8 +55,8 @@ class MarketRequest(BaseModel):
     )
     recent_prices: List[float] = Field(
         ...,
-        min_length=10,
-        description="Raw Close-price window (≥10 ticks) fed into the LightGBM+Wavelet model"
+        min_length=16,
+        description="Raw Close-price window (≥16 ticks) fed into the LightGBM+Wavelet model"
     )
 
     class Config:
@@ -65,8 +65,11 @@ class MarketRequest(BaseModel):
                 "ticker": "AAPL",
                 "volatility_index": 35.5,
                 "news_text": "Fed signals 75bps rate hike due to inflation",
-                "recent_prices": [182.3, 183.1, 182.8, 183.5, 184.0,
-                                   183.7, 184.2, 185.0, 184.6, 185.3]
+                "recent_prices": [
+                    182.3, 183.1, 182.8, 183.5, 184.0,
+                    183.7, 184.2, 185.0, 184.6, 185.3,
+                    185.8, 186.1, 185.5, 186.4, 187.0, 186.7
+                ]
             }
         }
 
@@ -150,6 +153,24 @@ def decide_route(entropy: float, news_text: Optional[str]) -> str:
     if entropy > ENTROPY_THRESHOLD and news_text:
         return "Path B"  # High uncertainty + news context → deep reasoning
     return "Path A"       # Low uncertainty OR no news → fast quant response
+
+
+def _sanitise_confidence(raw) -> Optional[int]:
+    """Coerce the LLM confidence field to Optional[int].
+
+    LLMs occasionally return strings like 'high' or 'very high' instead of
+    an integer.  Rather than propagating a Pydantic ValidationError (HTTP 500)
+    we normalise the value here:
+      - Already an int  → return as-is (clamped to [0, 100])
+      - Numeric string  → cast to int
+      - Non-numeric     → return None (unknown confidence)
+    """
+    if raw is None:
+        return None
+    try:
+        return max(0, min(100, int(raw)))
+    except (TypeError, ValueError):
+        return None  # graceful degradation — do not crash the response
 
 
 def path_a_response(
@@ -238,7 +259,7 @@ def path_b_response(
         return {
             "source": f"{source_tag} + System 1 Quant Baseline",
             "prediction": llm_result.get("expected_direction", "Unknown"),
-            "confidence": llm_result.get("confidence"),
+            "confidence": _sanitise_confidence(llm_result.get("confidence")),
             "event_class": llm_result.get("event_class"),
             "mechanism": llm_result.get("mechanism_trace"),
             # ── System 1 quant fields appended as baseline ──
