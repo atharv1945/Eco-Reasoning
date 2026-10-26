@@ -154,7 +154,7 @@ class TestInputValidation:
         p = self._base_payload()
         p["recent_prices"] = [100.0, 101.0, 102.0]  # only 3 elements
         r = self.client.post("/inference", json=p)
-        assert r.status_code == 422, f"Expected 422 for < 10 prices, got {r.status_code}"
+        assert r.status_code == 422, f"Expected 422 for < 16 prices, got {r.status_code}"
 
     def test_volatility_out_of_range_rejected(self):
         """volatility_index outside [0, 100] must yield 422."""
@@ -164,11 +164,11 @@ class TestInputValidation:
         assert r.status_code == 422, f"Expected 422 for out-of-range volatility, got {r.status_code}"
 
     def test_valid_minimal_payload_accepted(self):
-        """A valid minimal payload (10 prices, no news) must yield 200."""
+        """A valid minimal payload (16 prices, no news) must yield 200."""
         p = {
             "ticker": "TEST",
             "volatility_index": 20.0,
-            "recent_prices": list(range(150, 160, 1)),  # 10 prices
+            "recent_prices": list(range(150, 166, 1)),  # 16 prices (min_length=16)
         }
         r = self.client.post("/inference", json=p)
         assert r.status_code == 200, f"Expected 200 for valid minimal payload, got {r.status_code}"

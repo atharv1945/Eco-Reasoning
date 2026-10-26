@@ -18,20 +18,29 @@ from denoise_engine import wavelet_denoising
 from entropy_manager import entropy_from_predictions
 
 
+from pathlib import Path
+
 # ---------------------------------------------------------------------------
 # Load model once (amortised cost — not measured per tick)
 # ---------------------------------------------------------------------------
 
-MODEL_PATH = "system1_model.txt"
+MODEL_PATH = str(Path(__file__).resolve().parent / "system1_model.txt")
 _booster: lgb.Booster | None = None
 
 
 def _get_booster() -> lgb.Booster:
-    """Lazy-load the LightGBM booster (singleton)."""
+    """Lazy-load the LightGBM booster (singleton, absolute path)."""
     global _booster
     if _booster is None:
         _booster = lgb.Booster(model_file=MODEL_PATH)
     return _booster
+
+
+# Eager-load at import time so tests never pay the cold-start cost.
+try:
+    _get_booster()
+except Exception:
+    pass  # Graceful: _booster stays None; inference will try again at call-time.
 
 
 # ---------------------------------------------------------------------------
