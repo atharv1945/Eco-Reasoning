@@ -111,7 +111,7 @@ app = FastAPI(
 _vector_db = None
 
 
-def get_vector_db() -> Optional[FinancialNewsVectorDB]:
+def get_vector_db() -> Optional[Any]:
     """Lazy initialization of vector database."""
     global _vector_db
     if _vector_db is None and RAG_AVAILABLE:

@@ -1,0 +1,28 @@
+﻿Test ID,Test Performed,Expected Result,Actual Result,Status
+TC-01,DWT wavelet denoising - valid 1-D signal input,"Output same length as input; all values finite float64; noise variance reduced","Output length matched; all values finite float64; denoised variance <= noisy variance; alias wavelet_denoising confirmed",Pass
+TC-01b,DWT denoising - empty array input,ValueError raised,ValueError raised,Pass
+TC-01c,DWT denoising - 2-D array input,ValueError raised,ValueError raised,Pass
+TC-02,API input validation - missing ticker field,HTTP 422 Unprocessable Entity,HTTP 422 returned by Pydantic,Pass
+TC-02b,API input validation - missing recent_prices,HTTP 422,HTTP 422,Pass
+TC-02c,API input validation - empty prices list (< 10),HTTP 422,HTTP 422,Pass
+TC-02d,API input validation - fewer than 10 prices,HTTP 422,HTTP 422,Pass
+TC-02e,API input validation - volatility_index > 100,HTTP 422,HTTP 422,Pass
+TC-02f,API input validation - valid minimal payload,HTTP 200,HTTP 200,Pass
+TC-03,Shannon entropy - constant predictions (one bin),0.0 bits,0.0 bits exactly,Pass
+TC-03b,Shannon entropy - uniform distribution across bins,~log2(n_bins) bits,Within 5% of log2(10)=3.32 bits,Pass
+TC-03c,Shannon entropy - volatile > stable predictions,Volatile entropy > stable entropy,Confirmed for all tested seeds,Pass
+TC-03d,Shannon entropy - log2 units (bits) verification,2-bin uniform = 1 bit exactly,1.0 bit exactly,Pass
+TC-04,LightGBM model load from system1_model.txt,"Loads without error; num_trees() > 0","100 trees loaded; model file valid after retraining",Pass
+TC-04b,LightGBM fast_path_inference - valid price window,"Returns dict with prediction and entropy keys; prediction finite","Dict returned; prediction finite; entropy in [0, log2(6)]",Pass
+TC-04c,LightGBM inference - determinism on same input,Same input produces same prediction on repeated calls,Identical predictions confirmed on repeated calls,Pass
+TC-05,Gateway routing - entropy=1.4 bits with news present,Route to Path A (entropy <= threshold 1.5),route_decision=Path A confirmed via unit test and API endpoint,Pass
+TC-06,Gateway routing - entropy=1.5 bits (at threshold) with news,Route to Path A (strict > comparison; equal does not trigger B),route_decision=Path A; strict greater-than rule confirmed,Pass
+TC-07,Gateway routing - entropy=1.6 bits with news present,Route to Path B (entropy > 1.5 AND news present),route_decision=Path B confirmed via unit test and API endpoint,Pass
+TC-08,Gateway routing - entropy=1.6 bits with no news text,Route to Path A (news condition fails),"route_decision=Path A confirmed with news=None and news=empty string",Pass
+TC-09,Fast-path API integration - valid Path A request,"HTTP 200; route_decision=Path A; source contains System 1; all required fields; latency >= 0","HTTP 200; all assertions satisfied; direction word in prediction field; latency >= 0",Pass
+TC-10,Reasoning-path API integration - Path B with mocked LLM,"HTTP 200; route_decision=Path B; prediction from LLM expected_direction; confidence from LLM; quant_prediction from System 1","HTTP 200; prediction=Bearish from mock; confidence=85; quant_prediction=-0.008; missing expected_direction defaults to Unknown",Pass
+TC-11,LLM timeout/API failure fallback,"HTTP 200; route_decision=Path B preserved; quant_prediction present; no HTTP 500","HTTP 200 for Timeout/ConnectionError/Exception; route=Path B preserved; quant_prediction present",Pass
+TC-12,Malformed LLM response handling,"HTTP 200 for all error cases; no crash; safe fallback","HTTP 200 for invalid JSON/missing fields/empty object/wrong schema. FAIL: string-typed confidence causes Pydantic ValidationError -> HTTP 500 (unhandled defect in gateway.py:315)",Fail
+TC-13,Invalid API requests - schema violations and wrong methods,"HTTP 422 for schema errors; HTTP 404 unknown endpoint; HTTP 405 wrong method","HTTP 422 (empty body/missing fields/insufficient prices/string prices/negative volatility); HTTP 404 (unknown path); HTTP 405 (GET on /inference)",Pass
+TC-14,System 1 fast-path latency measurement (200 runs post warm-up),"Positive finite latency values; median and P95 measured","Mean=0.468ms Median=0.441ms P95=0.626ms P99=0.789ms; meets < 5ms target",Pass
+TC-15,Evaluation pipeline integrity - XY alignment and split checks,"X[i] aligns with y[i+1]; wavelet changes signal; test split >= 50 samples; MAE finite","All alignment checks passed; 744 test samples from NDX+BTC; MAE finite and non-negative",Pass
